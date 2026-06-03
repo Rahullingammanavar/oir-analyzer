@@ -1,0 +1,316 @@
+/* ============================================================
+   OIR File Analyzer — KISS Dark Theme
+   Cyan accent · Clean · Minimal
+   ============================================================ */
+
+/* ── Root ─────────────────────────────────────────────────── */
+.root {
+    -fx-background-color: #0d1117;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #e6edf3;
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.top-bar {
+    -fx-background-color: linear-gradient(to bottom, #161b22, #0d1117);
+    -fx-border-color: #00d4ff22;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, #00000088, 8, 0.4, 0, 2);
+}
+
+.title-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e6edf3;
+    -fx-effect: dropshadow(gaussian, #00d4ff55, 10, 0.3, 0, 0);
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.toolbar-btn {
+    -fx-padding: 8 22 8 22;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+/* Open button — cyan */
+.btn-accent {
+    -fx-background-color: #003d4d;
+    -fx-text-fill: #00d4ff;
+    -fx-border-color: #00d4ff;
+    -fx-border-width: 1;
+}
+.btn-accent:hover {
+    -fx-background-color: #005f77;
+    -fx-effect: dropshadow(gaussian, #00d4ff66, 12, 0.5, 0, 0);
+}
+.btn-accent:pressed {
+    -fx-background-color: #007a99;
+}
+
+/* Secondary buttons — grey */
+.btn-secondary {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #c9d1d9;
+    -fx-border-color: #30363d;
+    -fx-border-width: 1;
+}
+.btn-secondary:hover {
+    -fx-background-color: #2d333b;
+    -fx-border-color: #8b949e;
+    -fx-text-fill: #e6edf3;
+}
+.btn-secondary:pressed {
+    -fx-background-color: #161b22;
+}
+.btn-secondary:disabled {
+    -fx-background-color: #161b22;
+    -fx-text-fill: #484f58;
+    -fx-border-color: #21262d;
+    -fx-opacity: 0.7;
+}
+
+/* Add Tags button — green/teal */
+.btn-tag {
+    -fx-background-color: #003322;
+    -fx-text-fill: #3fb950;
+    -fx-border-color: #3fb950;
+    -fx-border-width: 1;
+}
+.btn-tag:hover {
+    -fx-background-color: #004d33;
+    -fx-effect: dropshadow(gaussian, #3fb95066, 12, 0.5, 0, 0);
+}
+.btn-tag:pressed {
+    -fx-background-color: #006644;
+}
+.btn-tag:disabled {
+    -fx-background-color: #1c2d22;
+    -fx-text-fill: #2d4a35;
+    -fx-border-color: #2d4a35;
+    -fx-opacity: 0.7;
+}
+
+/* ── Split pane ───────────────────────────────────────────── */
+.main-split {
+    -fx-background-color: #0d1117;
+    -fx-padding: 0;
+}
+.main-split > .split-pane-divider {
+    -fx-background-color: #30363d;
+    -fx-padding: 0 2 0 2;
+}
+
+/* ── Pane headers ─────────────────────────────────────────── */
+.pane-header {
+    -fx-background-color: #161b22;
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 7 12 7 12;
+    -fx-border-color: #30363d;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* ── XML Tree ─────────────────────────────────────────────── */
+.xml-tree {
+    -fx-background-color: #0d1117;
+    -fx-border-color: transparent;
+    -fx-control-inner-background: #0d1117;
+}
+
+.xml-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9d1d9;
+    -fx-padding: 3 4 3 4;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 12px;
+}
+.xml-tree .tree-cell:hover {
+    -fx-background-color: #21262d;
+    -fx-background-radius: 4;
+}
+.xml-tree .tree-cell:selected {
+    -fx-background-color: #00d4ff22;
+    -fx-background-radius: 4;
+    -fx-text-fill: #e6edf3;
+}
+.xml-tree .tree-cell:selected:focused {
+    -fx-background-color: #00d4ff33;
+}
+
+/* Root cell */
+.xml-tree .tree-root {
+    -fx-text-fill: #e6edf3;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Section cell */
+.xml-tree .tree-section {
+    -fx-text-fill: #00d4ff;
+    -fx-font-weight: bold;
+}
+
+/* Leaf cell */
+.xml-tree .tree-leaf {
+    -fx-text-fill: #8b949e;
+}
+
+/* Disclosure triangle */
+.xml-tree .tree-cell > .tree-disclosure-node > .arrow {
+    -fx-background-color: #484f58;
+}
+.xml-tree .tree-cell:hover > .tree-disclosure-node > .arrow {
+    -fx-background-color: #00d4ff;
+}
+
+/* Placeholder */
+.xml-tree .placeholder > .label {
+    -fx-text-fill: #484f58;
+    -fx-font-style: italic;
+    -fx-font-size: 13px;
+}
+
+/* ── Image pane ───────────────────────────────────────────── */
+.image-pane {
+    -fx-background-color: #161b22;
+}
+
+.placeholder-text {
+    -fx-text-fill: #484f58;
+    -fx-font-size: 15px;
+    -fx-font-style: italic;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+.thumb-info {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+    -fx-font-family: "Consolas", monospace;
+    -fx-padding: 5 12 5 12;
+    -fx-background-color: #161b22;
+    -fx-border-color: #30363d;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ── Status bar ───────────────────────────────────────────── */
+.status-bar {
+    -fx-background-color: #161b22;
+    -fx-border-color: #30363d;
+    -fx-border-width: 1 0 0 0;
+}
+
+.status-label {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 12px;
+    -fx-font-family: "Consolas", monospace;
+}
+
+.spec-label {
+    -fx-text-fill: #484f58;
+    -fx-font-size: 11px;
+}
+
+/* ── Progress bar ─────────────────────────────────────────── */
+.progress-bar {
+    -fx-accent: #00d4ff;
+    -fx-background-color: #21262d;
+    -fx-background-radius: 3;
+}
+.progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #00d4ff, #0099bb);
+    -fx-background-radius: 3;
+    -fx-effect: dropshadow(gaussian, #00d4ff66, 4, 0.4, 0, 0);
+}
+.progress-bar > .track {
+    -fx-background-color: #21262d;
+    -fx-background-radius: 3;
+}
+
+/* ── Dialog / Add Tags form ───────────────────────────────── */
+.dark-dialog {
+    -fx-background-color: #161b22;
+}
+
+.field-label {
+    -fx-text-fill: #8b949e;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.text-field {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #e6edf3;
+    -fx-border-color: #30363d;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 7 10 7 10;
+    -fx-font-size: 13px;
+    -fx-prompt-text-fill: #484f58;
+}
+.text-field:focused {
+    -fx-border-color: #00d4ff;
+    -fx-effect: dropshadow(gaussian, #00d4ff44, 5, 0.3, 0, 0);
+}
+
+/* ── Scroll bars (tree + general) ────────────────────────── */
+.scroll-bar {
+    -fx-background-color: #0d1117;
+}
+.scroll-bar > .thumb {
+    -fx-background-color: #30363d;
+    -fx-background-radius: 4;
+}
+.scroll-bar > .thumb:hover {
+    -fx-background-color: #484f58;
+}
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+}
+.scroll-bar > .increment-arrow,
+.scroll-bar > .decrement-arrow {
+    -fx-background-color: #484f58;
+}
+
+/* ── Alert dialogs ────────────────────────────────────────── */
+.dialog-pane {
+    -fx-background-color: #161b22;
+}
+.dialog-pane > .header-panel {
+    -fx-background-color: #21262d;
+}
+.dialog-pane > .header-panel > .label {
+    -fx-text-fill: #e6edf3;
+    -fx-font-weight: bold;
+}
+.dialog-pane > .content > .label,
+.dialog-pane .content.label {
+    -fx-text-fill: #c9d1d9;
+}
+.dialog-pane .button {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #c9d1d9;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+}
+.dialog-pane .button:hover {
+    -fx-background-color: #2d333b;
+    -fx-border-color: #8b949e;
+}
+.dialog-pane .button:default {
+    -fx-background-color: #003d4d;
+    -fx-text-fill: #00d4ff;
+    -fx-border-color: #00d4ff;
+}
+.dialog-pane .button:default:hover {
+    -fx-background-color: #005f77;
+}

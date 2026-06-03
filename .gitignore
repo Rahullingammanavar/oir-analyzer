@@ -1,0 +1,20 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+*.eclipse
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp OIR files created during tag injection
+oir_tmp_*.oir
+
+# Log files
+*.log
