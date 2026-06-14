@@ -1,45 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ═══════════════════════════════════════════════════════════════════════════════
   XSD: EVENT_LIST  (OIR Section Identifier = 14)
-  ═══════════════════════════════════════════════════════════════════════════════
-  Namespace  : http://www.olympus.co.jp/fluoview/model/event
-  Root       : event:eventList
-  Source     : Derived from actual OIR file (assignment1-phase1.oir)
+  Namespace : http://www.olympus.co.jp/fluoview/model/event
+  Root      : event:eventList
 
-  Observed structure in this OIR file:
-    <event:eventList/>          ← self-closing (no events recorded)
-
-  When events are present (other OIR files) each event is expected to contain
-  a timestamp and description. Both forms (empty and with content) are valid.
-  ═══════════════════════════════════════════════════════════════════════════════
+  Observed in assignment1-phase1.oir:
+    <event:eventList/>   ← self-closing, no events recorded in this file
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:event="http://www.olympus.co.jp/fluoview/model/event"
            targetNamespace="http://www.olympus.co.jp/fluoview/model/event"
            elementFormDefault="qualified">
 
-  <!-- Root element -->
-  <xs:element name="eventList" type="event:EventListType"/>
-
-  <xs:complexType name="EventListType">
-    <xs:sequence>
-      <!-- Zero or more events — empty is valid (this OIR has no events) -->
-      <xs:element name="event" type="event:EventType" minOccurs="0" maxOccurs="unbounded"/>
-      <!-- Accept any future Olympus extensions -->
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##other"/>
-    </xs:sequence>
-    <xs:anyAttribute processContents="lax"/>
-  </xs:complexType>
-
-  <xs:complexType name="EventType">
-    <xs:sequence>
-      <xs:element name="timestamp" type="xs:string"  minOccurs="0"/>
-      <xs:element name="type"      type="xs:string"  minOccurs="0"/>
-      <xs:element name="message"   type="xs:string"  minOccurs="0"/>
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
-    </xs:sequence>
-    <xs:anyAttribute processContents="lax"/>
-  </xs:complexType>
+  <xs:element name="eventList">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any minOccurs="0" maxOccurs="unbounded"
+                processContents="lax" namespace="##any"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

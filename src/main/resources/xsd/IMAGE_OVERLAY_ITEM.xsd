@@ -1,47 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ═══════════════════════════════════════════════════════════════════════════════
   XSD: IMAGE_OVERLAY_ITEM  (OIR Section Identifier = 4)
-  ═══════════════════════════════════════════════════════════════════════════════
-  Namespace  : http://www.olympus.co.jp/fluoview/model/overlay
-  Root       : overlay:contents
-  Source     : Derived from actual OIR file (assignment1-phase1.oir)
+  Namespace : http://www.olympus.co.jp/fluoview/model/overlay
+  Root      : overlay:contents
 
-  Observed structure in this OIR file:
-    <overlay:contents/>         ← self-closing (no ROI overlays drawn)
-
-  When ROI overlays exist (other OIR files), the contents element may contain
-  overlay item definitions (lines, circles, text, etc.). Both empty and
-  populated forms are valid.
-  ═══════════════════════════════════════════════════════════════════════════════
+  Observed in assignment1-phase1.oir:
+    <overlay:contents/>   ← self-closing, no ROI overlays in this file
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:overlay="http://www.olympus.co.jp/fluoview/model/overlay"
            targetNamespace="http://www.olympus.co.jp/fluoview/model/overlay"
            elementFormDefault="qualified">
 
-  <!-- Root element: may be empty or contain overlay items -->
-  <xs:element name="contents" type="overlay:ContentsType"/>
-
-  <xs:complexType name="ContentsType">
-    <xs:sequence>
-      <!-- Zero or more overlay items (ROI shapes, annotations, etc.) -->
-      <xs:element name="item"   type="overlay:OverlayItemType" minOccurs="0" maxOccurs="unbounded"/>
-      <!-- Accept any future Olympus extensions -->
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
-    </xs:sequence>
-    <xs:anyAttribute processContents="lax"/>
-  </xs:complexType>
-
-  <xs:complexType name="OverlayItemType">
-    <xs:sequence>
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
-    </xs:sequence>
-    <!-- Common overlay attributes -->
-    <xs:attribute name="id"    type="xs:string"  use="optional"/>
-    <xs:attribute name="type"  type="xs:string"  use="optional"/>
-    <xs:attribute name="color" type="xs:string"  use="optional"/>
-    <xs:anyAttribute processContents="lax"/>
-  </xs:complexType>
+  <xs:element name="contents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any minOccurs="0" maxOccurs="unbounded"
+                processContents="lax" namespace="##any"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>
