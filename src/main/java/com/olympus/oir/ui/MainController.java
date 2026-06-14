@@ -25,6 +25,7 @@ import javax.xml.parsers.*;
 import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * KISS UI — 3 controls, 1 split view.
@@ -267,14 +268,17 @@ public class MainController {
     }
 
     // ── Event: Download XML ────────────────────────────────────────────────
+    // Saves only the 5 pure XML sections: FILE_INFORMATION, IMAGE_PROPERTIES,
+    // IMAGE_ANNOTATION, IMAGE_OVERLAY_ITEM, EVENT_LIST.
+    // Binary loop sections (LUT, FRAME_LOCATION, etc.) are excluded automatically
+    // by XmlMetadataExtractor.extractAllXml().
 
     private void onExportXml() {
         if (currentFile == null) return;
 
         FileChooser fc = new FileChooser();
-        fc.setTitle("Save Extracted XML");
-        fc.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("XML File", "*.xml"));
+        fc.setTitle("Save XML Metadata");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML File", "*.xml"));
         fc.setInitialFileName(
             currentFile.getSourceFile().getName().replace(".oir", "_metadata.xml"));
         File out = fc.showSaveDialog(stage);
@@ -286,23 +290,24 @@ public class MainController {
             pw.println("  <source>" + currentFile.getSourceFile().getName() + "</source>");
             pw.println("  <oirVersion>" + currentFile.getHeader().getVersionString() + "</oirVersion>");
 
-            XmlMetadataExtractor ex = new XmlMetadataExtractor();
-            ex.extractAllXml(currentFile).forEach((sectionName, xml) -> {
+            // extractAllXml returns ONLY the 5 XML sections — no binary data
+            XmlMetadataExtractor extractor = new XmlMetadataExtractor();
+            extractor.extractAllXml(currentFile).forEach((sectionName, xml) -> {
                 pw.println("\n  <!-- " + sectionName + " -->");
                 pw.println("  <section name=\"" + sectionName + "\">");
-                // Indent the XML body by 4 spaces
-                for (String line : xml.split("\n")) {
+                for (String line : xml.split("\n"))
                     pw.println("    " + line);
-                }
                 pw.println("  </section>");
             });
 
             pw.println("</oirMetadata>");
             setStatus("✅  XML saved → " + out.getName());
+
         } catch (Exception ex) {
             showError("Failed to save XML", ex);
         }
     }
+
 
     // ── Event: Show File Header ────────────────────────────────────────────
 

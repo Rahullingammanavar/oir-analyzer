@@ -31,17 +31,40 @@ public class XmlMetadataExtractor {
     private static final Logger LOG = Logger.getLogger(XmlMetadataExtractor.class.getName());
 
     /**
-     * Returns a map of section name → pretty-printed XML string for all available
-     * XML-bearing sections in the parsed file.
+     * The five section IDs that contain pure XML documents (not binary loop data).
+     * Only these are safe and meaningful to export as XML files.
+     *
+     *   1 = FILE_INFORMATION
+     *   2 = IMAGE_PROPERTIES
+     *   3 = IMAGE_ANNOTATION
+     *   4 = IMAGE_OVERLAY_ITEM
+     *  14 = EVENT_LIST
+     *
+     * Sections like IMAGE_LUT (5) or REFERENCE_IMAGE_INFORMATION (10) contain
+     * embedded XML strings inside binary loops — they are excluded here.
+     */
+    private static final Set<Integer> XML_ONLY_SECTION_IDS = Set.of(
+        OirSection.FILE_INFORMATION,
+        OirSection.IMAGE_PROPERTIES,
+        OirSection.IMAGE_ANNOTATION,
+        OirSection.IMAGE_OVERLAY_ITEM,
+        OirSection.EVENT_LIST
+    );
+
+    /**
+     * Returns a map of section name → pretty-printed XML string.
+     * Only the 5 pure XML sections are included (binary loop sections excluded).
      */
     public Map<String, String> extractAllXml(ParsedOirFile parsedFile) {
         Map<String, String> result = new LinkedHashMap<>();
 
         for (OirSection section : parsedFile.getSections()) {
+            // Skip binary loop sections — only export pure XML sections
+            if (!XML_ONLY_SECTION_IDS.contains(section.getSectionId())) continue;
+
             String xml = section.getXmlContent();
             if (xml != null && !xml.isBlank()) {
-                String pretty = prettyPrint(xml);
-                result.put(section.getSectionName(), pretty);
+                result.put(section.getSectionName(), prettyPrint(xml));
             }
         }
 
