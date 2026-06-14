@@ -1,5 +1,6 @@
 package com.olympus.oir.ui;
 
+import com.olympus.oir.extractor.ImageExtractor;
 import com.olympus.oir.extractor.ThumbnailExtractor;
 import com.olympus.oir.extractor.XmlMetadataExtractor;
 import com.olympus.oir.model.*;
@@ -11,6 +12,7 @@ import com.olympus.oir.writer.CustomMetadataWriter;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -24,7 +26,10 @@ import javafx.stage.Stage;
 import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 import javax.xml.parsers.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
+
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -59,6 +64,13 @@ public class MainController {
     private ProgressBar      progressBar;
     private Button           exportXmlBtn;
     private Button           headerBtn;
+
+    // ── Frame Extractor UI refs ──────────────────────────────────────────────
+    private ComboBox<ImageExtractor.ChannelInfo> channelCombo;
+    private Spinner<Integer>                     frameSpinner;
+    private ImageView                            frameImageView;
+    private Button                               exportFrameBtn;
+    private Label                                frameInfoLabel;
 
     /** Validation status bar — shown below the tree header after file load. */
     private HBox             validationBar;
@@ -235,7 +247,80 @@ public class MainController {
         VBox.setVgrow(imgStack, Priority.ALWAYS);
         rightPane.getChildren().addAll(imgHeader, imgStack, thumbInfoLabel);
 
-        SplitPane split = new SplitPane(leftPane, rightPane);
+
+        // ── Right: Frame Extractor ──────────────────────────────────────────
+        VBox frameExtPane = new VBox(0);
+        Label frameHeader = new Label("  🔬  Image Frame Extraction");
+        frameHeader.getStyleClass().add("pane-header");
+        frameHeader.setMaxWidth(Double.MAX_VALUE);
+
+        channelCombo = new ComboBox<>();
+        channelCombo.setPromptText("Select Channel");
+        channelCombo.getStyleClass().add("combo-box");
+        channelCombo.setDisable(true);
+
+        frameSpinner = new Spinner<>(1, 1, 1);
+        frameSpinner.getStyleClass().add("spinner");
+        frameSpinner.setDisable(true);
+        frameSpinner.setEditable(true);
+
+        exportFrameBtn = new Button("⬇  Export Frame");
+        exportFrameBtn.getStyleClass().addAll("toolbar-btn", "btn-secondary");
+        exportFrameBtn.setDisable(true);
+        exportFrameBtn.setOnAction(e -> onExportFrame());
+
+        HBox controlsBox = new HBox(10,
+            new Label("Channel:"), channelCombo,
+            new Label("Frame:"), frameSpinner,
+            exportFrameBtn
+        );
+        controlsBox.setAlignment(Pos.CENTER_LEFT);
+        controlsBox.setPadding(new Insets(10, 16, 10, 16));
+        controlsBox.setStyle("-fx-background-color: #1a1a2e;");
+
+        frameImageView = new ImageView();
+        frameImageView.setPreserveRatio(true);
+        frameImageView.setSmooth(true);
+
+        Label noFrameLabel = new Label("🖼\n\nNo frame loaded\nOpen an OIR file and\nselect a channel/frame");
+        noFrameLabel.getStyleClass().add("placeholder-text");
+        noFrameLabel.setAlignment(Pos.CENTER);
+
+        StackPane frameImgStack = new StackPane(noFrameLabel, frameImageView);
+        frameImgStack.getStyleClass().add("image-pane");
+        frameImgStack.setAlignment(Pos.CENTER);
+
+        frameImageView.imageProperty().addListener((obs, o, img) -> {
+            noFrameLabel.setVisible(img == null);
+            frameImageView.setVisible(img != null);
+        });
+        frameImageView.setVisible(false);
+
+        frameInfoLabel = new Label("Format: —  |  Size: —");
+        frameInfoLabel.getStyleClass().add("thumb-info");
+
+        // Bind frame image dimensions to stack size
+        frameImgStack.widthProperty().addListener((obs, o, w) ->
+            frameImageView.setFitWidth(w.doubleValue() - 20));
+        frameImgStack.heightProperty().addListener((obs, o, h) ->
+            frameImageView.setFitHeight(h.doubleValue() - 50));
+
+        VBox.setVgrow(frameImgStack, Priority.ALWAYS);
+        frameExtPane.getChildren().addAll(frameHeader, controlsBox, frameImgStack, frameInfoLabel);
+
+
+        // ── TabPane wrapping both views ──────────────────────────────────────
+        TabPane rightTabPane = new TabPane();
+        rightTabPane.getStyleClass().add("right-tab-pane");
+
+        Tab thumbTab = new Tab(" Thumbnail ", rightPane);
+        thumbTab.setClosable(false);
+        Tab extractTab = new Tab(" Frame Extractor ", frameExtPane);
+        extractTab.setClosable(false);
+
+        rightTabPane.getTabs().addAll(thumbTab, extractTab);
+
+        SplitPane split = new SplitPane(leftPane, rightTabPane);
         split.getStyleClass().add("main-split");
         split.setDividerPositions(0.55);
         return split;
@@ -385,6 +470,7 @@ public class MainController {
             headerBtn.setDisable(false);
             populateXmlTree(currentFile);
             populateThumbnail(currentFile);
+            initFrameExtractor(currentFile); // Initialize frame extractor controls
             runValidation(currentFile);   // XSD validation runs after tree is built
             OirHeader h = currentFile.getHeader();
             setStatus("✅  " + file.getName() + "  |  OIR v" + h.getVersionString()
@@ -911,4 +997,158 @@ public class MainController {
             setStatus("❌  " + title);
         });
     }
+    private void initFrameExtractor(ParsedOirFile pf) {
+        List<ImageExtractor.ChannelInfo> channels = ImageExtractor.getChannels(pf);
+        List<String> frames = ImageExtractor.getFrames(pf);
+
+        if (channels.isEmpty() || frames.isEmpty()) {
+            channelCombo.setDisable(true);
+            frameSpinner.setDisable(true);
+            exportFrameBtn.setDisable(true);
+            frameImageView.setImage(null);
+            frameInfoLabel.setText("No channels or frames found in this OIR file.");
+            return;
+        }
+
+        // Setup channels combo
+        channelCombo.getItems().clear();
+        channelCombo.getItems().addAll(channels);
+        channelCombo.getSelectionModel().selectFirst();
+        channelCombo.setDisable(false);
+
+        // Setup frames spinner
+        int frameCount = frames.size();
+        SpinnerValueFactory<Integer> valueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, frameCount, 1);
+        frameSpinner.setValueFactory(valueFactory);
+        frameSpinner.setDisable(false);
+
+        // Clear previous event handler references by setting new action triggers
+        channelCombo.setOnAction(e -> loadFrameAsync());
+        frameSpinner.valueProperty().addListener((obs, o, n) -> {
+            if (n != null) loadFrameAsync();
+        });
+
+        exportFrameBtn.setDisable(false);
+
+        // Load initial frame
+        loadFrameAsync();
+    }
+
+    private void loadFrameAsync() {
+        if (currentFile == null) return;
+
+        ImageExtractor.ChannelInfo selectedCh = channelCombo.getSelectionModel().getSelectedItem();
+        Integer frameNum = frameSpinner.getValue();
+
+        if (selectedCh == null || frameNum == null) return;
+
+        List<String> frames = ImageExtractor.getFrames(currentFile);
+        if (frameNum < 1 || frameNum > frames.size()) return;
+        String frameIndex = frames.get(frameNum - 1);
+
+        setStatus("Extracting frame " + frameNum + " / channel " + selectedCh.order + " …");
+        progressBar.setVisible(true);
+        progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+
+        Task<BufferedImage> task = new Task<>() {
+            @Override
+            protected BufferedImage call() throws Exception {
+                ImageExtractor extractor = new ImageExtractor();
+                short[] raw = extractor.extractRawPixels(currentFile, frameIndex, selectedCh.id);
+                int[] dims = ImageExtractor.getDimensions(currentFile);
+                return extractor.convertTo8BitGrayscale(raw, dims[0], dims[1]);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            BufferedImage bimg = task.getValue();
+            progressBar.setVisible(false);
+            if (bimg != null) {
+                Image fxImg = SwingFXUtils.toFXImage(bimg, null);
+                frameImageView.setImage(fxImg);
+                int[] dims = ImageExtractor.getDimensions(currentFile);
+                frameInfoLabel.setText(String.format("Format: 8-bit Greyscale Preview (Auto-Scaled)  |  Size: %d × %d px", dims[0], dims[1]));
+                setStatus("✅  Frame extracted successfully.");
+            } else {
+                frameImageView.setImage(null);
+                frameInfoLabel.setText("Failed to reconstruct frame.");
+                setStatus("❌  Failed to extract frame.");
+            }
+        });
+
+        task.setOnFailed(e -> {
+            progressBar.setVisible(false);
+            frameImageView.setImage(null);
+            frameInfoLabel.setText("Extraction failed: " + task.getException().getMessage());
+            setStatus("❌  Extraction failed: " + task.getException().getMessage());
+            showError("Failed to extract frame", task.getException());
+        });
+
+        new Thread(task, "frame-extractor").start();
+    }
+
+    private void onExportFrame() {
+        if (currentFile == null) return;
+
+        ImageExtractor.ChannelInfo selectedCh = channelCombo.getSelectionModel().getSelectedItem();
+        Integer frameNum = frameSpinner.getValue();
+        if (selectedCh == null || frameNum == null) return;
+
+        List<String> frames = ImageExtractor.getFrames(currentFile);
+        if (frameNum < 1 || frameNum > frames.size()) return;
+        String frameIndex = frames.get(frameNum - 1);
+
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Export Reconstructed Frame");
+        fc.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("PNG Image (8-bit)", "*.png"),
+            new FileChooser.ExtensionFilter("TIFF Image (16-bit)", "*.tif", "*.tiff")
+        );
+        String baseName = currentFile.getSourceFile().getName().replace(".oir", "");
+        fc.setInitialFileName(String.format("%s_ch%d_frame%d.png", baseName, selectedCh.order, frameNum));
+        fc.setInitialDirectory(currentFile.getSourceFile().getParentFile());
+        File outFile = fc.showSaveDialog(stage);
+        if (outFile == null) return;
+
+        setStatus("Exporting frame to " + outFile.getName() + " …");
+        progressBar.setVisible(true);
+        progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                ImageExtractor extractor = new ImageExtractor();
+                short[] raw = extractor.extractRawPixels(currentFile, frameIndex, selectedCh.id);
+                int[] dims = ImageExtractor.getDimensions(currentFile);
+
+                String ext = outFile.getName().substring(outFile.getName().lastIndexOf(".") + 1).toLowerCase();
+                BufferedImage bimg;
+                if ("tif".equals(ext) || "tiff".equals(ext)) {
+                    bimg = extractor.convertTo16BitGrayscale(raw, dims[0], dims[1]);
+                } else {
+                    bimg = extractor.convertTo8BitGrayscale(raw, dims[0], dims[1]);
+                }
+
+                boolean ok = ImageIO.write(bimg, ext, outFile);
+                if (!ok) {
+                    throw new IOException("No writer found for format: " + ext);
+                }
+                return null;
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            progressBar.setVisible(false);
+            setStatus("✅  Frame exported successfully to " + outFile.getName());
+        });
+
+        task.setOnFailed(e -> {
+            progressBar.setVisible(false);
+            setStatus("❌  Export failed: " + task.getException().getMessage());
+            showError("Failed to export frame", task.getException());
+        });
+
+        new Thread(task, "frame-exporter").start();
+    }
 }
+
