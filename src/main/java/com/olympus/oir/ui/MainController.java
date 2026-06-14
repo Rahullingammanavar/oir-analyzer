@@ -58,6 +58,9 @@ public class MainController {
     private Button           exportXmlBtn;
     private Button           headerBtn;
 
+    /** Maps section-level TreeItems → OirSection for right-click tag injection. */
+    private final Map<TreeItem<String>, OirSection> sectionItemMap = new HashMap<>();
+
     public MainController(Stage stage) { this.stage = stage; }
 
     // ── Build Scene ────────────────────────────────────────────────────────
@@ -132,16 +135,31 @@ public class MainController {
 
         // Cell factory: style root, section, and leaf nodes differently
         xmlTree.setCellFactory(tv -> new TreeCell<>() {
+            // One shared context menu per cell (re-used across recycles)
+            private final ContextMenu ctxMenu = buildCellContextMenu();
+
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setGraphic(null); getStyleClass().removeAll("tree-root","tree-section","tree-leaf"); return; }
+                if (empty || item == null) {
+                    setText(null); setGraphic(null);
+                    getStyleClass().removeAll("tree-root","tree-section","tree-leaf");
+                    setContextMenu(null);
+                    return;
+                }
                 setText(item);
                 TreeItem<String> ti = getTreeItem();
                 getStyleClass().removeAll("tree-root", "tree-section", "tree-leaf");
-                if (ti != null && ti.getParent() == null) getStyleClass().add("tree-root");
-                else if (ti != null && ti.getParent() != null && ti.getParent().getParent() == null) getStyleClass().add("tree-section");
-                else getStyleClass().add("tree-leaf");
+                if (ti != null && ti.getParent() == null)                                              getStyleClass().add("tree-root");
+                else if (ti != null && ti.getParent() != null && ti.getParent().getParent() == null)   getStyleClass().add("tree-section");
+                else                                                                                   getStyleClass().add("tree-leaf");
+
+                // Show "Add Tag Here" context menu for any node inside a writable XML section
+                OirSection sec = findSectionFor(ti);
+                boolean writable = sec != null
+                    && CustomMetadataWriter.XML_SECTION_NAMES.containsKey(sec.getSectionId())
+                    && sec.getXmlContent() != null && !sec.getXmlContent().isBlank();
+                setContextMenu(writable ? ctxMenu : null);
             }
         });
 
@@ -377,6 +395,8 @@ public class MainController {
     // No blocks list, no warnings node — KISS.
 
     private void populateXmlTree(ParsedOirFile pf) {
+        sectionItemMap.clear();  // fresh map for every file load
+
         String fname = pf.getSourceFile().getName();
         OirHeader h  = pf.getHeader();
 
@@ -395,6 +415,7 @@ public class MainController {
 
         for (OirSection sec : sections) {
             TreeItem<String> secNode = section(sec.getSectionName());
+            sectionItemMap.put(secNode, sec);  // register so right-click can find it
             secNode.setExpanded(false);
 
             // XML content → DOM tree
@@ -662,6 +683,137 @@ public class MainController {
             default -> "";
         };
         label.setText("→ " + desc);
+    }
+
+    // ── Context-menu helpers ───────────────────────────────────────────────
+
+    /**
+     * Build the ContextMenu shown on every tree cell that belongs to a writable
+     * XML section. The menu item triggers onAddTagToSection() using whichever
+     * item is currently selected in the tree.
+     */
+    private ContextMenu buildCellContextMenu() {
+        MenuItem addHere = new MenuItem("🏷  Add Tag Here");
+        addHere.setOnAction(e -> {
+            TreeItem<String> selected = xmlTree.getSelectionModel().getSelectedItem();
+            OirSection sec = findSectionFor(selected);
+            if (sec != null) onAddTagToSection(sec);
+        });
+        ContextMenu menu = new ContextMenu(addHere);
+        var css = getClass().getResource("/css/dark-theme.css");
+        if (css != null) menu.getStylesheets().add(css.toExternalForm());
+        return menu;
+    }
+
+    /**
+     * Walk up the tree from {@code item} until we find a node registered in
+     * sectionItemMap. Returns null if no section ancestor is found (e.g. root).
+     */
+    private OirSection findSectionFor(TreeItem<String> item) {
+        while (item != null) {
+            OirSection sec = sectionItemMap.get(item);
+            if (sec != null) return sec;
+            item = item.getParent();
+        }
+        return null;
+    }
+
+    /**
+     * Simplified "Add Tag" dialog — the target section is already known from the
+     * tree click, so there is no section ComboBox. Everything else is identical
+     * to onAddTags().
+     */
+    private void onAddTagToSection(OirSection sec) {
+        if (currentFile == null) { setStatus("⚠ Open a file first."); return; }
+
+        Dialog<String[]> dialog = new Dialog<>();
+        dialog.setTitle("Add Tag → " + sec.getSectionName());
+        dialog.setHeaderText("Inject a custom XML tag into:  " + sec.getSectionName());
+
+        ButtonType saveType = new ButtonType("💾  Save to File", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12); grid.setVgap(14);
+        grid.setPadding(new Insets(24, 24, 16, 24));
+
+        // Section info row
+        Label secInfoLabel = new Label();
+        secInfoLabel.setStyle("-fx-text-fill: #7ecbe0; -fx-font-size: 11px;");
+        secInfoLabel.setWrapText(true);
+        secInfoLabel.setMaxWidth(280);
+        updateSectionInfo(secInfoLabel, sec);
+
+        // Tag name
+        Label nameLabel = new Label("Tag Name:");
+        nameLabel.getStyleClass().add("field-label");
+        TextField tagName = new TextField();
+        tagName.setPromptText("e.g.  sampleName   (no spaces, XML-safe)");
+        tagName.getStyleClass().add("text-field");
+        tagName.setPrefWidth(280);
+
+        Label nameHint = new Label("⚠ Must start with a letter. Only letters, digits, _ - . allowed.");
+        nameHint.setStyle("-fx-text-fill: #e0a050; -fx-font-size: 10px;");
+        nameHint.setWrapText(true);
+        nameHint.setMaxWidth(280);
+
+        // Tag value
+        Label valLabel = new Label("Tag Value:");
+        valLabel.getStyleClass().add("field-label");
+        TextField tagValue = new TextField();
+        tagValue.setPromptText("e.g.  Mouse brain slice #3");
+        tagValue.getStyleClass().add("text-field");
+        tagValue.setPrefWidth(280);
+
+        // Save mode
+        ToggleGroup saveGroup = new ToggleGroup();
+        RadioButton overwriteRb = new RadioButton("♻️  Overwrite original file");
+        overwriteRb.setToggleGroup(saveGroup);
+        overwriteRb.setSelected(true);
+        overwriteRb.setStyle("-fx-text-fill: #e0e0e0; -fx-font-size: 12px;");
+        RadioButton newFileRb = new RadioButton("📄  Save as new file…");
+        newFileRb.setToggleGroup(saveGroup);
+        newFileRb.setStyle("-fx-text-fill: #e0e0e0; -fx-font-size: 12px;");
+        VBox saveModeBox = new VBox(6, overwriteRb, newFileRb);
+
+        javafx.scene.control.Separator sep2 = new javafx.scene.control.Separator();
+        sep2.setMaxWidth(Double.MAX_VALUE);
+
+        grid.add(new Label("Section:"),  0, 0); grid.add(secInfoLabel, 1, 0);
+        grid.add(nameLabel,              0, 1); grid.add(tagName,      1, 1);
+        grid.add(new Label(),            0, 2); grid.add(nameHint,     1, 2);
+        grid.add(valLabel,               0, 3); grid.add(tagValue,     1, 3);
+        grid.add(sep2,                   0, 4, 2, 1);
+        grid.add(new Label("Save Mode:"),0, 5); grid.add(saveModeBox,  1, 5);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().setPrefWidth(500);
+        dialog.getDialogPane().setPrefHeight(380);
+
+        var css = getClass().getResource("/css/dark-theme.css");
+        if (css != null) dialog.getDialogPane().getStylesheets().add(css.toExternalForm());
+
+        // Disable Save until tag name is valid XML identifier
+        var saveButton = dialog.getDialogPane().lookupButton(saveType);
+        saveButton.setDisable(true);
+        tagName.textProperty().addListener((obs, o, n) -> {
+            boolean valid = n != null && n.matches("[a-zA-Z_][a-zA-Z0-9_\\-\\.]*");
+            saveButton.setDisable(!valid);
+            nameHint.setStyle("-fx-font-size: 10px; -fx-text-fill: "
+                + (valid || n.isBlank() ? "#7ecbe0" : "#e05050") + ";");
+        });
+
+        dialog.setResultConverter(btn -> {
+            if (btn == saveType) {
+                String mode = overwriteRb.isSelected() ? "overwrite" : "new";
+                return new String[]{ String.valueOf(sec.getSectionId()),
+                    tagName.getText().trim(), tagValue.getText().trim(), mode };
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(result ->
+            injectTag(Integer.parseInt(result[0]), result[1], result[2], result[3]));
     }
 
 
