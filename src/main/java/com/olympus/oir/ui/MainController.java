@@ -54,7 +54,6 @@ public class MainController {
     private Label            thumbInfoLabel;
     private Label            statusLabel;
     private ProgressBar      progressBar;
-    private Button           addTagsBtn;
     private Button           exportXmlBtn;
     private Button           headerBtn;
 
@@ -77,7 +76,8 @@ public class MainController {
         return scene;
     }
 
-    // ── Top bar: [Open] [Export XML] [Header] | title | [Add Tags] ──────────
+    // ── Top bar: [Open] [Export XML] [Header] | title  ─────────────────────
+    // Tags are added via right-click on the XML tree — no toolbar button needed.
 
     private HBox buildTopBar() {
         HBox bar = new HBox();
@@ -105,19 +105,12 @@ public class MainController {
         Label title = new Label("🔬  OIR File Analyzer");
         title.getStyleClass().add("title-label");
 
-        // Right group
-        addTagsBtn = new Button("🏷  Add Tags to File");
-        addTagsBtn.getStyleClass().addAll("toolbar-btn", "btn-tag");
-        addTagsBtn.setDisable(true);
-        addTagsBtn.setOnAction(e -> onAddTags());
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         bar.getChildren().addAll(
             openBtn, exportXmlBtn, headerBtn,
-            spacer,
-            addTagsBtn);
+            spacer, title);
         return bar;
     }
 
@@ -360,7 +353,6 @@ public class MainController {
         setStatus("Parsing " + file.getName() + " …");
         progressBar.setVisible(true);
         progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
-        addTagsBtn.setDisable(true);
 
         Task<ParsedOirFile> task = new Task<>() {
             @Override protected ParsedOirFile call() throws Exception {
@@ -371,7 +363,6 @@ public class MainController {
         task.setOnSucceeded(e -> {
             currentFile = task.getValue();
             progressBar.setVisible(false);
-            addTagsBtn.setDisable(false);
             exportXmlBtn.setDisable(false);
             headerBtn.setDisable(false);
             populateXmlTree(currentFile);
@@ -519,157 +510,6 @@ public class MainController {
         }
     }
 
-    // ── Event: Add Tags ────────────────────────────────────────────────────
-
-    private void onAddTags() {
-        if (currentFile == null) { setStatus("⚠ Open a file first."); return; }
-
-        // Collect only XML-bearing sections present in this file
-        List<OirSection> xmlSections = currentFile.getSections().stream()
-            .filter(s -> CustomMetadataWriter.XML_SECTION_NAMES.containsKey(s.getSectionId()))
-            .filter(s -> s.getXmlContent() != null && !s.getXmlContent().isBlank())
-            .toList();
-
-        if (xmlSections.isEmpty()) {
-            showError("No writable sections",
-                new Exception("No XML sections found in this file to inject tags into."));
-            return;
-        }
-
-        Dialog<String[]> dialog = new Dialog<>();
-        dialog.setTitle("Add Custom Tag");
-        dialog.setHeaderText("Inject a custom XML tag into the OIR file");
-
-        ButtonType saveType = new ButtonType("💾  Save to File", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12); grid.setVgap(14);
-        grid.setPadding(new Insets(24, 24, 16, 24));
-
-        // ── Row 0: Section selector ───────────────────────────────────────
-        Label secLabel = new Label("Target Section:");
-        secLabel.getStyleClass().add("field-label");
-
-        ComboBox<OirSection> sectionBox = new ComboBox<>();
-        sectionBox.getItems().addAll(xmlSections);
-        sectionBox.setValue(
-            // Default to IMAGE_PROPERTIES if present, else first available
-            xmlSections.stream()
-                .filter(s -> s.getSectionId() == OirSection.IMAGE_PROPERTIES)
-                .findFirst()
-                .orElse(xmlSections.get(0)));
-        sectionBox.setPrefWidth(280);
-        sectionBox.setConverter(new javafx.util.StringConverter<>() {
-            @Override public String toString(OirSection s) {
-                return s == null ? "" : s.getSectionName();
-            }
-            @Override public OirSection fromString(String str) { return null; }
-        });
-
-        // Info label below section
-        Label sectionInfo = new Label();
-        sectionInfo.getStyleClass().add("section-info-label");
-        sectionInfo.setStyle("-fx-text-fill: #7ecbe0; -fx-font-size: 11px;");
-        sectionInfo.setWrapText(true);
-        sectionInfo.setMaxWidth(280);
-        updateSectionInfo(sectionInfo, sectionBox.getValue());
-        sectionBox.setOnAction(e -> updateSectionInfo(sectionInfo, sectionBox.getValue()));
-
-        // ── Row 1: Tag name ───────────────────────────────────────────────
-        Label nameLabel = new Label("Tag Name:");
-        nameLabel.getStyleClass().add("field-label");
-
-        TextField tagName = new TextField();
-        tagName.setPromptText("e.g.  sampleName   (no spaces, XML-safe)");
-        tagName.getStyleClass().add("text-field");
-        tagName.setPrefWidth(280);
-
-        Label nameHint = new Label("⚠ Must start with a letter. Only letters, digits, _ - . allowed.");
-        nameHint.setStyle("-fx-text-fill: #e0a050; -fx-font-size: 10px;");
-        nameHint.setWrapText(true);
-        nameHint.setMaxWidth(280);
-
-        // ── Row 2: Tag value ──────────────────────────────────────────────
-        Label valLabel = new Label("Tag Value:");
-        valLabel.getStyleClass().add("field-label");
-
-        TextField tagValue = new TextField();
-        tagValue.setPromptText("e.g.  Mouse brain slice #3");
-        tagValue.getStyleClass().add("text-field");
-        tagValue.setPrefWidth(280);
-
-        // ── Row 5: Save mode ──────────────────────────────────────────────
-        Label saveLabel = new Label("Save Mode:");
-        saveLabel.getStyleClass().add("field-label");
-
-        ToggleGroup saveGroup = new ToggleGroup();
-
-        RadioButton overwriteRb = new RadioButton("♻️  Overwrite original file");
-        overwriteRb.setToggleGroup(saveGroup);
-        overwriteRb.setSelected(true);
-        overwriteRb.setStyle("-fx-text-fill: #e0e0e0; -fx-font-size: 12px;");
-
-        RadioButton newFileRb = new RadioButton("📄  Save as new file…");
-        newFileRb.setToggleGroup(saveGroup);
-        newFileRb.setStyle("-fx-text-fill: #e0e0e0; -fx-font-size: 12px;");
-
-        VBox saveModeBox = new VBox(6, overwriteRb, newFileRb);
-
-        // Separator line above save mode
-        javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
-        sep.setMaxWidth(Double.MAX_VALUE);
-
-        // ── Layout ────────────────────────────────────────────────────────
-        grid.add(secLabel,     0, 0); grid.add(sectionBox,   1, 0);
-        grid.add(new Label(),  0, 1); grid.add(sectionInfo,  1, 1);
-        grid.add(nameLabel,    0, 2); grid.add(tagName,      1, 2);
-        grid.add(new Label(),  0, 3); grid.add(nameHint,     1, 3);
-        grid.add(valLabel,     0, 4); grid.add(tagValue,     1, 4);
-        grid.add(sep,          0, 5, 2, 1);  // span 2 columns
-        grid.add(saveLabel,    0, 6); grid.add(saveModeBox,  1, 6);
-
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().setPrefWidth(520);
-        dialog.getDialogPane().setPrefHeight(430);
-
-        var css = getClass().getResource("/css/dark-theme.css");
-        if (css != null) dialog.getDialogPane().getStylesheets().add(css.toExternalForm());
-
-        // Disable Save if tag name is empty or invalid
-        var saveButton = dialog.getDialogPane().lookupButton(saveType);
-        saveButton.setDisable(true);
-        tagName.textProperty().addListener((obs, o, n) -> {
-            boolean valid = n != null && n.matches("[a-zA-Z_][a-zA-Z0-9_\\-\\.]*");
-            saveButton.setDisable(!valid);
-            nameHint.setStyle(
-                "-fx-font-size: 10px; -fx-text-fill: "
-                + (valid || n.isBlank() ? "#7ecbe0" : "#e05050") + ";");
-        });
-
-        dialog.setResultConverter(btn -> {
-            if (btn == saveType) {
-                OirSection chosen = sectionBox.getValue();
-                // result[3] = "overwrite" or "new"
-                String mode = overwriteRb.isSelected() ? "overwrite" : "new";
-                return new String[] {
-                    String.valueOf(chosen.getSectionId()),
-                    tagName.getText().trim(),
-                    tagValue.getText().trim(),
-                    mode
-                };
-            }
-            return null;
-        });
-
-        dialog.showAndWait().ifPresent(result -> {
-            int sectionId = Integer.parseInt(result[0]);
-            String name   = result[1];
-            String value  = result[2];
-            String mode   = result[3];
-            injectTag(sectionId, name, value, mode);
-        });
-    }
 
     /** Update info text below the section ComboBox. */
     private void updateSectionInfo(Label label, OirSection sec) {
@@ -700,8 +540,6 @@ public class MainController {
             if (sec != null) onAddTagToSection(sec);
         });
         ContextMenu menu = new ContextMenu(addHere);
-        var css = getClass().getResource("/css/dark-theme.css");
-        if (css != null) menu.getStylesheets().add(css.toExternalForm());
         return menu;
     }
 
