@@ -5,6 +5,8 @@ import com.olympus.oir.extractor.XmlMetadataExtractor;
 import com.olympus.oir.model.*;
 import com.olympus.oir.parser.OirParser;
 import com.olympus.oir.util.MockOirGenerator;
+import com.olympus.oir.validator.ValidationResult;
+import com.olympus.oir.validator.XsdValidator;
 import com.olympus.oir.writer.CustomMetadataWriter;
 
 import javafx.application.Platform;
@@ -57,6 +59,9 @@ public class MainController {
     private ProgressBar      progressBar;
     private Button           exportXmlBtn;
     private Button           headerBtn;
+
+    /** Validation status bar — shown below the tree header after file load. */
+    private HBox             validationBar;
 
     /** Maps section-level TreeItems → OirSection for right-click tag injection. */
     private final Map<TreeItem<String>, OirSection> sectionItemMap = new HashMap<>();
@@ -183,8 +188,16 @@ public class MainController {
         treeTopBar.setAlignment(Pos.CENTER_LEFT);
         treeTopBar.setStyle("-fx-background-color: #1a1a2e; -fx-padding: 0 6 0 0;");
 
+        // Validation bar — hidden until a file is loaded
+        validationBar = new HBox(6);
+        validationBar.setAlignment(Pos.CENTER_LEFT);
+        validationBar.setPadding(new Insets(4, 10, 4, 10));
+        validationBar.setStyle("-fx-background-color: #0d0d1a; -fx-border-color: #1e3a5f; -fx-border-width: 0 0 1 0;");
+        validationBar.setVisible(false);
+        validationBar.setManaged(false);
+
         VBox.setVgrow(xmlTree, Priority.ALWAYS);
-        leftPane.getChildren().addAll(treeTopBar, xmlTree);
+        leftPane.getChildren().addAll(treeTopBar, validationBar, xmlTree);
 
 
         // ── Right: Thumbnail ───────────────────────────────────────────────
@@ -372,6 +385,7 @@ public class MainController {
             headerBtn.setDisable(false);
             populateXmlTree(currentFile);
             populateThumbnail(currentFile);
+            runValidation(currentFile);   // XSD validation runs after tree is built
             OirHeader h = currentFile.getHeader();
             setStatus("✅  " + file.getName() + "  |  OIR v" + h.getVersionString()
                 + "  |  " + currentFile.getBlocks().size() + " blocks"
@@ -384,6 +398,100 @@ public class MainController {
         });
 
         new Thread(task, "oir-parser").start();
+    }
+
+    // ── XSD Validation ──────────────────────────────────────────────────
+
+    /**
+     * Runs XSD validation on a background thread, then updates the validation bar
+     * on the JavaFX Application Thread.
+     * Each section gets a coloured pill label. Click any pill to see detail.
+     */
+    private void runValidation(ParsedOirFile pf) {
+        Task<List<ValidationResult>> vTask = new Task<>() {
+            @Override protected List<ValidationResult> call() {
+                return new XsdValidator().validateAll(pf);
+            }
+        };
+
+        vTask.setOnSucceeded(ev -> {
+            List<ValidationResult> results = vTask.getValue();
+            updateValidationBar(results);
+        });
+
+        vTask.setOnFailed(ev -> {
+            // Validation failure doesn’t block anything — just hide the bar
+            validationBar.setVisible(false);
+            validationBar.setManaged(false);
+        });
+
+        new Thread(vTask, "xsd-validator").start();
+    }
+
+    /**
+     * Populates the validation bar with one coloured pill per validated section.
+     * Click a pill to see the full validation detail in an alert.
+     */
+    private void updateValidationBar(List<ValidationResult> results) {
+        validationBar.getChildren().clear();
+
+        if (results.isEmpty()) {
+            validationBar.setVisible(false);
+            validationBar.setManaged(false);
+            return;
+        }
+
+        // Summary label on the left
+        long validCount = results.stream().filter(ValidationResult::isValid).count();
+        boolean allValid = validCount == results.size();
+        Label summaryLbl = new Label(
+            allValid ? "🛡  Validation" : "🛡  Validation — " + validCount + "/" + results.size() + " valid");
+        summaryLbl.setStyle("-fx-text-fill: " + (allValid ? "#4ecdc4" : "#e0a050")
+            + "; -fx-font-size: 11px; -fx-font-weight: bold;");
+        validationBar.getChildren().add(summaryLbl);
+
+        // One pill per section
+        for (ValidationResult r : results) {
+            Label pill = new Label(r.getStatusEmoji() + "  " + r.getSectionName());
+            pill.setPadding(new Insets(2, 8, 2, 8));
+            pill.setStyle(
+                "-fx-background-radius: 10; -fx-font-size: 10px; -fx-cursor: hand; "
+                + "-fx-text-fill: #e0e0e0; -fx-background-color: "
+                + switch (r.getStatus()) {
+                    case VALID   -> "#1a3a2a";
+                    case WARNING -> "#3a2a10";
+                    case ERROR   -> "#3a1010";
+                } + ";");
+
+            // Click pill → show detail alert
+            pill.setOnMouseClicked(e -> showValidationDetail(r));
+            validationBar.getChildren().add(pill);
+        }
+
+        validationBar.setVisible(true);
+        validationBar.setManaged(true);
+    }
+
+    /** Shows a detail dialog for a single section’s validation result. */
+    private void showValidationDetail(ValidationResult r) {
+        Alert alert = new Alert(
+            r.isValid() ? Alert.AlertType.INFORMATION : Alert.AlertType.WARNING);
+        alert.setTitle("XSD Validation — " + r.getSectionName());
+        alert.setHeaderText(r.getStatusEmoji() + "  " + r.getSectionName()
+            + "  [" + r.getStatus() + "]");
+
+        if (r.getMessages().isEmpty()) {
+            alert.setContentText("✅  XML is well-formed and passes schema validation.");
+        } else {
+            String detail = String.join("\n", r.getMessages());
+            alert.setContentText(detail);
+        }
+
+        alert.getDialogPane().setPrefWidth(560);
+        alert.getDialogPane().setStyle("-fx-font-family: 'Consolas', monospace; -fx-font-size: 12px;");
+        var css = getClass().getResource("/css/dark-theme.css");
+        if (css != null) alert.getDialogPane().getStylesheets().add(css.toExternalForm());
+        alert.show();
     }
 
     // ── Populate XML Tree ──────────────────────────────────────────────────

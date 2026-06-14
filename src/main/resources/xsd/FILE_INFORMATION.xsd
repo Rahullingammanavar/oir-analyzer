@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OIR FILE_INFORMATION section schema (Section Identifier = 1)
+  Namespace: http://www.olympus.co.jp/fluoview/model/fileinfo
+  Root element: fileinfo:fileInfomation  ("fileInfomation" is Olympus spelling)
+
+  Strategy: Lenient — accepts any well-formed content inside the root element.
+  Validates that the document root is a recognised FILE_INFORMATION element.
+  Upgrade this schema as more fields become documented.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:fileinfo="http://www.olympus.co.jp/fluoview/model/fileinfo"
+           targetNamespace="http://www.olympus.co.jp/fluoview/model/fileinfo"
+           elementFormDefault="qualified">
+
+  <xs:element name="fileInfomation">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

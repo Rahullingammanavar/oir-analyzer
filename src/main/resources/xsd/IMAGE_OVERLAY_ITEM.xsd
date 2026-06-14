@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OIR IMAGE_OVERLAY_ITEM section schema (Section Identifier = 4)
+  Namespace: http://www.olympus.co.jp/fluoview/model/overlay
+  Root element: overlay:contents
+
+  Contains display information for ROI/Annotation overlays:
+  line types, fonts, colors, etc. Usually empty in files without ROI drawings.
+
+  Strategy: Lenient — validates root element, accepts any child content.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:overlay="http://www.olympus.co.jp/fluoview/model/overlay"
+           targetNamespace="http://www.olympus.co.jp/fluoview/model/overlay"
+           elementFormDefault="qualified">
+
+  <xs:element name="contents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

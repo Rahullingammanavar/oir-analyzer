@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OIR IMAGE_ANNOTATION section schema (Section Identifier = 3)
+  Namespace: http://www.olympus.co.jp/fluoview/model/annotation
+  Root element: annotation:annotationStore
+
+  This section also holds our <customMetadata> block (no namespace prefix).
+  Olympus annotation elements use the annotation namespace.
+  Our injected custom tags are in the default (empty) namespace.
+
+  Strategy:
+    - Olympus elements  -> accepted via xs:any (lax)
+    - <customMetadata>  -> accepted via xs:any (lax)
+    Both live inside the annotationStore root.
+
+  CUSTOM TAG REGISTRY (updated by XsdUpdater when tags are injected):
+  =====================================================================
+  (no custom tags registered yet)
+  =====================================================================
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:annotation="http://www.olympus.co.jp/fluoview/model/annotation"
+           targetNamespace="http://www.olympus.co.jp/fluoview/model/annotation"
+           elementFormDefault="qualified">
+
+  <xs:element name="annotationStore">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- Accepts all Olympus annotation elements AND our custom metadata block -->
+        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"
+                namespace="##any"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

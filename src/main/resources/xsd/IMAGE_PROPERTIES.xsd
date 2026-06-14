@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OIR IMAGE_PROPERTIES section schema (Section Identifier = 2)
+  Namespace: http://www.olympus.co.jp/fluoview/model/lsmimage
+  Root element: lsmimage:imageProperties
+
+  Contains observation conditions: objective, channels, pixel sizes, LUT references, etc.
+  Multiple secondary namespaces used inside:
+    base, bi, commonimage, commonparam, lsmparam, opticalelement, roi, xsi
+
+  Strategy: Lenient — validates root element, accepts any namespaced child content.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:lsmimage="http://www.olympus.co.jp/fluoview/model/lsmimage"
+           targetNamespace="http://www.olympus.co.jp/fluoview/model/lsmimage"
+           elementFormDefault="qualified">
+
+  <xs:element name="imageProperties">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
