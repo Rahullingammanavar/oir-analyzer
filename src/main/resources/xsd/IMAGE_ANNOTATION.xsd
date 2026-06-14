@@ -1,37 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  OIR IMAGE_ANNOTATION section schema (Section Identifier = 3)
-  Namespace: http://www.olympus.co.jp/fluoview/model/annotation
-  Root element: annotation:annotationStore
+  ═══════════════════════════════════════════════════════════════════════════════
+  XSD: IMAGE_ANNOTATION  (OIR Section Identifier = 3)
+  ═══════════════════════════════════════════════════════════════════════════════
+  Namespace  : http://www.olympus.co.jp/fluoview/model/annotation
+  Root       : annotation:annotationStore
+  Source     : Derived from actual OIR file (assignment1-phase1.oir)
 
-  This section also holds our <customMetadata> block (no namespace prefix).
-  Olympus annotation elements use the annotation namespace.
-  Our injected custom tags are in the default (empty) namespace.
+  Observed structure in this OIR file:
+    <annotation:annotationStore>
+      <annotation:annotations/>          ← empty (no Olympus annotations)
+      <annotation:auxiliaries/>          ← empty
+      <customMetadata>                   ← OUR injected block (no namespace)
+        <injectedAt>2026-06-04T...</injectedAt>
+        <hils>43</hils>
+      </customMetadata>
+    </annotation:annotationStore>
 
-  Strategy:
-    - Olympus elements  -> accepted via xs:any (lax)
-    - <customMetadata>  -> accepted via xs:any (lax)
-    Both live inside the annotationStore root.
+  IMPORTANT: <customMetadata> is in the DEFAULT (empty) namespace — it is NOT
+  an Olympus element. It is injected by this application. It is accepted here
+  via xs:any namespace="##any". Validation of custom tag names and uniqueness
+  is performed programmatically in XsdValidator (Level 3 check).
 
-  CUSTOM TAG REGISTRY (updated by XsdUpdater when tags are injected):
-  =====================================================================
-  (no custom tags registered yet)
-  =====================================================================
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │  CUSTOM TAG REGISTRY                                                     │
+  │  This section is updated automatically by XsdUpdater when new tags are  │
+  │  injected via the application right-click menu.                          │
+  │  Format: tagName | injectedAt | description                              │
+  ├──────────────────────────────────────────────────────────────────────────┤
+  │  injectedAt | auto         | ISO-8601 timestamp when tags were added     │
+  │  hils       | 2026-06-04   | (user-defined)                              │
+  └──────────────────────────────────────────────────────────────────────────┘
+  ═══════════════════════════════════════════════════════════════════════════
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:annotation="http://www.olympus.co.jp/fluoview/model/annotation"
            targetNamespace="http://www.olympus.co.jp/fluoview/model/annotation"
            elementFormDefault="qualified">
 
-  <xs:element name="annotationStore">
-    <xs:complexType>
-      <xs:sequence>
-        <!-- Accepts all Olympus annotation elements AND our custom metadata block -->
-        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"
-                namespace="##any"/>
-      </xs:sequence>
-      <xs:anyAttribute processContents="lax"/>
-    </xs:complexType>
-  </xs:element>
+  <!-- Root element -->
+  <xs:element name="annotationStore" type="annotation:AnnotationStoreType"/>
+
+  <xs:complexType name="AnnotationStoreType">
+    <xs:sequence>
+      <!-- Olympus annotation list — may be empty or contain ROI annotation items -->
+      <xs:element name="annotations"  type="annotation:AnnotationListType" minOccurs="0" maxOccurs="1"/>
+      <!-- Olympus auxiliary data — may be empty -->
+      <xs:element name="auxiliaries"  type="annotation:AuxiliaryListType"  minOccurs="0" maxOccurs="1"/>
+      <!-- Accepts our <customMetadata> block (no namespace) and any future Olympus additions -->
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- Annotation list — holds individual annotation items when ROIs are drawn -->
+  <xs:complexType name="AnnotationListType">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- Auxiliary list — holds supplementary data items -->
+  <xs:complexType name="AuxiliaryListType">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
 
 </xs:schema>

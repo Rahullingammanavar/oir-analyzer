@@ -1,27 +1,169 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  OIR IMAGE_PROPERTIES section schema (Section Identifier = 2)
-  Namespace: http://www.olympus.co.jp/fluoview/model/lsmimage
-  Root element: lsmimage:imageProperties
+  ═══════════════════════════════════════════════════════════════════════════════
+  XSD: IMAGE_PROPERTIES  (OIR Section Identifier = 2)
+  ═══════════════════════════════════════════════════════════════════════════════
+  Primary namespace : http://www.olympus.co.jp/fluoview/model/lsmimage
+  Root element      : lsmimage:imageProperties
+  Source            : Derived from actual OIR file (assignment1-phase1.oir,
+                      Olympus FluoView FV3000, OIR v1.5)
 
-  Contains observation conditions: objective, channels, pixel sizes, LUT references, etc.
-  Multiple secondary namespaces used inside:
-    base, bi, commonimage, commonparam, lsmparam, opticalelement, roi, xsi
+  Namespaces declared in this file's XML:
+    lsmimage     — http://www.olympus.co.jp/fluoview/model/lsmimage   (primary)
+    base         — http://www.olympus.co.jp/fluoview/model/base
+    bi           — http://www.olympus.co.jp/fluoview/model/bi
+    commonimage  — http://www.olympus.co.jp/fluoview/model/commonimage
+    commonparam  — http://www.olympus.co.jp/fluoview/model/commonparam
+    lsmparam     — http://www.olympus.co.jp/fluoview/model/lsmparam
+    opticalelement—http://www.olympus.co.jp/fluoview/model/opticalelement
+    roi          — http://www.olympus.co.jp/fluoview/model/roi
+    xsi          — http://www.w3.org/2001/XMLSchema-instance (W3C standard)
 
-  Strategy: Lenient — validates root element, accepts any namespaced child content.
+  Top-level structure observed:
+    imageProperties (version="1.1.0.0")
+      commonimage:general
+        base:creationDateTime
+      commonimage:system
+        base:systemName, base:systemVersion, base:deviceName
+      commonimage:microscope
+        base:name
+      commonimage:processing
+        commonimage:region
+      commonimage:lsm
+        commonimage:laser (×N)
+          commonimage:name, commonimage:id
+      lsmimage:acquisition (embedSaturationInfo)
+        commonimage:microscopeConfiguration
+          commonimage:objectiveLens (id, special)
+            opticalelement:name, displayName, magnification, naValue,
+            wdValue, immersion, refraction
+        lsmimage:lsmConfiguration
+        lsmimage:channel (×N, detectorId, enable, id, order, xsi:type)
+          commonimage:name, commonimage:deviceName
+          lsmimage:laserDataId
+        lsmimage:imagingParam
+          lsmparam:imageSize, lsmparam:speed, lsmparam:zoom, ...
+        lsmimage:scannerSettings
+        ... (many more elements)
+      commonimage:biProperties
+        bi:dia, bi:epi, bi:diaLampState, ...
+
+  Strategy: Define the root element and first two levels. Use xs:any (lax)
+  for deep content to avoid maintaining 100+ element definitions.
+  Since child elements belong to OTHER namespaces (commonimage, base, etc.),
+  they are accepted via xs:any namespace="##other".
+  ═══════════════════════════════════════════════════════════════════════════════
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:lsmimage="http://www.olympus.co.jp/fluoview/model/lsmimage"
            targetNamespace="http://www.olympus.co.jp/fluoview/model/lsmimage"
            elementFormDefault="qualified">
 
-  <xs:element name="imageProperties">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
-      </xs:sequence>
-      <xs:anyAttribute processContents="lax"/>
-    </xs:complexType>
-  </xs:element>
+  <!-- ═══════════════════════════════════════════════════════════
+       Root element
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:element name="imageProperties" type="lsmimage:ImagePropertiesType"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       imageProperties
+       Top-level block — holds all acquisition metadata
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:complexType name="ImagePropertiesType">
+    <xs:sequence>
+      <!--
+        First-level children are ALL from other namespaces (commonimage, lsmimage).
+        We accept them leniently so we can validate the root structure without
+        needing to import every sub-namespace schema.
+      -->
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+
+    <!-- version attribute — observed value: "1.1.0.0" -->
+    <xs:attribute name="version" type="lsmimage:VersionStringType" use="required"/>
+
+    <!-- Namespace declarations appear as attributes — accepted leniently -->
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       lsmimage:acquisition
+       Contains scanner settings, channels, imaging parameters
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:element name="acquisition" type="lsmimage:AcquisitionType"/>
+
+  <xs:complexType name="AcquisitionType">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <!-- embedSaturationInfo — observed value: "false" -->
+    <xs:attribute name="embedSaturationInfo" type="xs:boolean" use="optional"/>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       lsmimage:channel
+       One element per detector channel in the experiment.
+       Observed attributes: detectorId, enable, id, order, xsi:type
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:element name="channel" type="lsmimage:ChannelType"/>
+
+  <xs:complexType name="ChannelType">
+    <xs:sequence>
+      <!-- Contains: commonimage:name, commonimage:deviceName, lsmimage:laserDataId -->
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <xs:attribute name="detectorId" type="xs:string"  use="optional"/>
+    <xs:attribute name="enable"     type="xs:boolean" use="optional"/>
+    <xs:attribute name="id"         type="xs:string"  use="optional"/>
+    <xs:attribute name="order"      type="xs:integer" use="optional"/>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       lsmimage:imagingParam, lsmimage:scannerSettings,
+       lsmimage:laserDataId, lsmimage:lsmConfiguration,
+       lsmimage:dichroicMirror, lsmimage:filterCube,
+       lsmimage:lightpath, etc.
+       All use the same flexible pattern.
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:element name="imagingParam"       type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="scannerSettings"    type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="lsmConfiguration"   type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="imagingMainLaser"   type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="imagingSIMLaser"    type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="dichroicMirror"     type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="dmSlider"           type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="commonBarrierFilter"type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="filterCube"         type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="lightpath"          type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="lsmMicroscopeLightpath"   type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="externalDetectorLightpath" type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="irLaserLightpath"   type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="autoPinhole"        type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="pinholePosition"    type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="scannerType"        type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="group"              type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="phase"              type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="param"              type="lsmimage:FlexibleBlockType"/>
+  <xs:element name="name"               type="xs:string"/>
+  <xs:element name="laserDataId"        type="xs:string"/>
+
+  <!-- Reusable type: any content, any attributes -->
+  <xs:complexType name="FlexibleBlockType">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Version string type: MAJOR.MINOR.PATCH.BUILD
+       e.g. "1.1.0.0"
+       ═══════════════════════════════════════════════════════════ -->
+  <xs:simpleType name="VersionStringType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d+\.\d+\.\d+\.\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>
