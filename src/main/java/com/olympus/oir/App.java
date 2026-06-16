@@ -21,20 +21,20 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            // Build main scene via controller
-            MainController controller = new MainController(primaryStage);
-            Scene scene = controller.buildScene();
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/main.fxml"));
+            javafx.scene.Parent root = loader.load();
+            Scene scene = new Scene(root);
 
-            primaryStage.setTitle("🔬 OIR File Analyzer — Olympus Imaging Raw");
+            primaryStage.setTitle("🔬 OIR Extractor & Validator");
             primaryStage.setScene(scene);
-            primaryStage.setMinWidth(1100);
-            primaryStage.setMinHeight(720);
-            primaryStage.setWidth(1280);
-            primaryStage.setHeight(800);
+            primaryStage.setMinWidth(800);
+            primaryStage.setMinHeight(650);
+            primaryStage.setWidth(850);
+            primaryStage.setHeight(700);
             primaryStage.centerOnScreen();
             primaryStage.show();
 
-            LOG.info("OIR File Analyzer started.");
+            LOG.info("OIR Extractor & Validator started.");
 
         } catch (Exception ex) {
             LOG.log(Level.SEVERE, "Failed to start application", ex);

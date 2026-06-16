@@ -16,9 +16,16 @@ module com.olympus.oir {
     requires java.desktop;       // javax.imageio (BMP decode)
     requires java.logging;
 
+    // ── JDOM2 (for building structured experiment_metadata.xml) ──
+    requires org.jdom2;
+
+    // ── ImageJ (for 16-bit TIFF extraction and overlay) ──
+    requires ij;
+
     // ── Opens / Exports ─────────────────────────────────────
-    // Allow JavaFX reflection into our UI package (for property binding etc.)
+    // Allow JavaFX reflection into our UI packages (for property binding etc.)
     opens com.olympus.oir.ui to javafx.fxml, javafx.graphics;
+    opens com.oirextractor.ui to javafx.fxml, javafx.graphics;
     opens com.olympus.oir.model to javafx.base;
 
     exports com.olympus.oir;
@@ -28,4 +35,9 @@ module com.olympus.oir {
     exports com.olympus.oir.writer;
     exports com.olympus.oir.util;
     exports com.olympus.oir.ui;
+    
+    // New Extractor architecture exports
+    exports com.oirextractor.ui;
+    exports com.oirextractor.validator;
+    exports com.oirextractor.extractor;
 }

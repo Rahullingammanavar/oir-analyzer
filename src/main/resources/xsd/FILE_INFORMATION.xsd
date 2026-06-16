@@ -1,44 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ═══════════════════════════════════════════════════════════════════════════════
-  XSD: FILE_INFORMATION  (OIR Section Identifier = 1)
-  ═══════════════════════════════════════════════════════════════════════════════
-  Namespace  : http://www.olympus.co.jp/fluoview/model/fileinfo
-  Root       : fileinfo:fileInfomation
-  Source     : Derived from actual OIR file (assignment1-phase1.oir)
-
-  Observed structure in this OIR file:
-    <fileinfo:fileInfomation>
-      <fileinfo:version>1.5.1.1</fileinfo:version>
-    </fileinfo:fileInfomation>
-
-  version format: MAJOR.MINOR.PATCH.BUILD  (four dot-separated integers)
-  ═══════════════════════════════════════════════════════════════════════════════
--->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:fileinfo="http://www.olympus.co.jp/fluoview/model/fileinfo"
            targetNamespace="http://www.olympus.co.jp/fluoview/model/fileinfo"
+           xmlns:fileinfo="http://www.olympus.co.jp/fluoview/model/fileinfo"
            elementFormDefault="qualified">
 
-  <!-- Root element -->
-  <xs:element name="fileInfomation" type="fileinfo:FileInfomationType"/>
-
-  <!-- fileInfomation content -->
-  <xs:complexType name="FileInfomationType">
-    <xs:sequence>
-      <!-- OIR format version string, e.g. "1.5.1.1" -->
-      <xs:element name="version" type="fileinfo:VersionStringType" minOccurs="1" maxOccurs="1"/>
-      <!-- Future Olympus extensions accepted leniently -->
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any"/>
-    </xs:sequence>
-    <xs:anyAttribute processContents="lax"/>
-  </xs:complexType>
-
-  <!-- Version must be MAJOR.MINOR.PATCH.BUILD (e.g. "1.5.1.1") -->
-  <xs:simpleType name="VersionStringType">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="\d+\.\d+\.\d+\.\d+"/>
-    </xs:restriction>
-  </xs:simpleType>
+    <xs:element name="fileInfomation">
+        <xs:complexType>
+            <xs:sequence>
+                <!-- Required fields present in extracted XML -->
+                <xs:element name="version" type="xs:string" minOccurs="1"/>
+                
+                <!-- Optional fields mentioned in spec/notes but not in current XML -->
+                <!-- verify type from real data -->
+                <xs:element name="name" type="xs:string" minOccurs="0"/>
+                
+                <!-- verify type from real data -->
+                <xs:element name="date" type="xs:string" minOccurs="0"/>
+                
+                <!-- verify type from real data -->
+                <xs:element name="researcher" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

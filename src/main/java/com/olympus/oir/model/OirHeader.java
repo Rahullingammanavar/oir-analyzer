@@ -3,22 +3,38 @@ package com.olympus.oir.model;
 /**
  * Represents the parsed Header Range of an OIR File Unit.
  *
- * v1.x layout (80 bytes, 10 attributes × 8 bytes):
- *   0x0000 [16B] Magic Word — "OLYMPUSRAWFORMAT"
- *   0x0010 [ 8B] OIR Version (upper32=major, lower32=minor)
- *   0x0018 [ 8B] File Size of this File Unit
- *   0x0020 [ 8B] Index Range byte offset
- *   0x0028 [ 8B] Total number of Blocks
- *   0x0030 [ 8B] Number of Block attribute types (=6)
- *   0x0038 [ 8B] THUMBNAIL_METAINFO byte offset
- *   0x0040 [ 8B] Reserved
+ * ── v1.x layout (80 bytes = 10 attributes × 8 bytes) ──────────────────────
  *
- * v2.1+ layout (96 bytes, 12 attributes × 8 bytes), adds:
- *   0x0048 [ 8B] Product ID string
- *   0x0050 [ 8B] Product OIR version
- *   0x0058 [ 8B] Reserved
+ *   0x0000 [16B]  ①② Magic Word — "OLYMPUSRAWFORMAT"
+ *                     (counts as 2 attributes of 8 bytes each)
+ *   0x0010 [ 8B]  ③  Header attribute count — always 10 for v1.x.
+ *                     NOTE: This is NOT the version field. Common mistake.
+ *   0x0018 [ 8B]  ④  OIR Version (little-endian 64-bit split):
+ *                       lower 32 bits @ 0x0018 = minor version  (e.g. 5)
+ *                       upper 32 bits @ 0x001C = major version  (e.g. 1)
+ *                     → read as two sequential int32 LE reads: minor then major
+ *   0x0020 [ 8B]  ⑤  File size of this File Unit (bytes)
+ *   0x0028 [ 8B]  ⑥  Index Range byte offset from file start
+ *   0x0030 [ 8B]  ⑦  Total number of Blocks in Data Range
+ *   0x0038 [ 8B]  ⑧  Number of Block attribute types (= 6, fixed)
+ *   0x0040 [ 8B]  ⑨  THUMBNAIL_METAINFO byte offset from file start
+ *   0x0048 [ 8B]  ⑩  Reserved
+ *   ── header ends at 0x0050 = 80 bytes ──
  *
- * All fields are little-endian.
+ * ── v2.1+ layout (96 bytes = 12 attributes × 8 bytes) ────────────────────
+ *   Same as above, plus 2 additional attributes starting at 0x0050:
+ *
+ *   0x0050 [ 8B]  ⑪  Product ID (8-byte integer)
+ *   0x0058 [ 4B]  ⑫a Product Version Major (int32 LE)
+ *   0x005C [ 4B]  ⑫b Product Version Minor (int32 LE)
+ *   0x0060 [ 8B]      Reserved2
+ *   ── parser reads to 0x0067 inclusive ──
+ *
+ *   NOTE: The spec states 96 bytes (12 × 8). The parser reads product-version
+ *   as two int32 fields (4+4 = 8 bytes, one logical attribute) plus reserved2
+ *   (8 bytes). Total extra = 8 + 8 = 16 bytes → 80 + 16 = 96 bytes. ✓
+ *
+ * All fields are little-endian (OIR spec section 8.1).
  */
 public class OirHeader {
 
@@ -38,13 +54,13 @@ public class OirHeader {
     private long totalBlocks;        // number of Blocks in Data Range
     private long blockAttributeCount;// fixed = 6
     private long thumbnailMetainfoOffset; // byte offset to THUMBNAIL_METAINFO block
-    private long reserved1;          // reserved (v1.x)
+    private long reserved1;          // reserved (v1.x field ⑩)
 
     // ── v2.1+ additional fields ─────────────────────────────
-    private long productId;          // Product ID string (8 bytes)
+    private long productId;          // Product ID (8-byte integer)
     private int  productVersionMajor;
     private int  productVersionMinor;
-    private long reserved2;          // reserved (v2.1+)
+    private long reserved2;          // reserved (v2.1+ trailing field)
 
     // ── Header size (80 for v1.x, 96 for v2.1+) ─────────────
     private int headerSize;
@@ -73,7 +89,7 @@ public class OirHeader {
 
     /** Returns true if OIR file version is 2.1 or later (extended header + product version in sections). */
     public boolean isV21OrLater() {
-        return versionMajor >= 2 && versionMinor >= 1;
+        return versionMajor > 2 || (versionMajor == 2 && versionMinor >= 1);
     }
 
     public long getFileSize() { return fileSize; }
@@ -111,7 +127,8 @@ public class OirHeader {
 
     @Override
     public String toString() {
-        return String.format("OirHeader{magic='%s', version=%s, fileSize=%d, totalBlocks=%d, thumbnailOffset=0x%X}",
-                magicWord, getVersionString(), fileSize, totalBlocks, thumbnailMetainfoOffset);
+        return String.format(
+            "OirHeader{magic='%s', version=%s, fileSize=%d, totalBlocks=%d, thumbnailOffset=0x%X, headerSize=%dB}",
+            magicWord, getVersionString(), fileSize, totalBlocks, thumbnailMetainfoOffset, headerSize);
     }
 }

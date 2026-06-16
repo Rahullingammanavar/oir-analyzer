@@ -1,5 +1,7 @@
 package com.olympus.oir.model;
 
+import java.io.File;
+
 /**
  * Represents a single Block in the OIR Data Range.
  *
@@ -9,13 +11,18 @@ package com.olympus.oir.model;
  *   [dataSize bytes] data — payload
  *
  * The byte offset of this block is sourced from the Index Range.
+ * In multi-file OIR datasets (e.g. _0001.oir), the sourceFile indicates
+ * which physical file contains this block.
  */
 public class OirBlock {
+
+    /** The physical file containing this block (essential for multi-file datasets). */
+    private File sourceFile;
 
     /** Block index (0-based) as listed in the Index Range. */
     private int blockIndex;
 
-    /** Absolute byte offset of this block from the start of the File Unit. */
+    /** Absolute byte offset of this block from the start of its sourceFile. */
     private long byteOffset;
 
     /** Data size in bytes (excludes the 8-byte block header). */
@@ -34,7 +41,8 @@ public class OirBlock {
 
     public OirBlock() {}
 
-    public OirBlock(int blockIndex, long byteOffset, int dataSize, int rawAttributeCode) {
+    public OirBlock(File sourceFile, int blockIndex, long byteOffset, int dataSize, int rawAttributeCode) {
+        this.sourceFile = sourceFile;
         this.blockIndex = blockIndex;
         this.byteOffset = byteOffset;
         this.dataSize = dataSize;
@@ -70,6 +78,9 @@ public class OirBlock {
 
     // ── Getters / Setters ────────────────────────────────────
 
+    public File getSourceFile() { return sourceFile; }
+    public void setSourceFile(File sourceFile) { this.sourceFile = sourceFile; }
+
     public int getBlockIndex() { return blockIndex; }
     public void setBlockIndex(int blockIndex) { this.blockIndex = blockIndex; }
 
@@ -94,7 +105,8 @@ public class OirBlock {
     @Override
     public String toString() {
         String attrName = (attribute != null) ? attribute.getName() : ("UNKNOWN(" + rawAttributeCode + ")");
-        return String.format("Block#%d [%s] offset=0x%X size=%d bytes",
-                blockIndex, attrName, byteOffset, dataSize);
+        String fileName = (sourceFile != null) ? sourceFile.getName() : "unknown";
+        return String.format("Block#%d [%s] file=%s offset=0x%X size=%d bytes",
+                blockIndex, attrName, fileName, byteOffset, dataSize);
     }
 }

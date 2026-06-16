@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.oirextractor.ui.MainController"
+           prefWidth="800.0" prefHeight="650.0">
+
+    <!-- ============================================== -->
+    <!-- SCREEN 1: HOME                                 -->
+    <!-- ============================================== -->
+    <VBox fx:id="homeScreen" spacing="20" alignment="TOP_CENTER" style="-fx-background-color: #f4f4f4;">
+        <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+        
+        <HBox alignment="CENTER_LEFT">
+            <Label text="OIR Extractor &amp; Validator" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnAdvanced" text="🛠 XML Tree &amp; Tag Injector" style="-fx-font-size: 12px; -fx-background-color: transparent; -fx-text-fill: #555; -fx-border-color: #aaa; -fx-border-radius: 3;" onAction="#onOpenAdvancedInspector"/>
+        </HBox>
+
+        <!-- File Selection -->
+        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label text="File Selection" style="-fx-font-weight: bold;"/>
+            
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="OIR File:" prefWidth="80"/>
+                <TextField fx:id="oirFilePathField" HBox.hgrow="ALWAYS" editable="false"/>
+                <Button text="Browse..." onAction="#onBrowseOirFile"/>
+            </HBox>
+            
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Output:" prefWidth="80"/>
+                <TextField fx:id="outputDirField" HBox.hgrow="ALWAYS" editable="false"/>
+                <Button text="Browse..." onAction="#onBrowseOutputDir"/>
+            </HBox>
+        </VBox>
+
+        <!-- Task Selection -->
+        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label text="Tasks to Perform" style="-fx-font-weight: bold;"/>
+            <CheckBox fx:id="chkExtractXml" text="Extract XML" selected="true"/>
+            <CheckBox fx:id="chkValidateXml" text="Validate XML against XSD" selected="true"/>
+            <CheckBox fx:id="chkExtractImages" text="Extract Images" selected="true" onAction="#onExtractImagesToggled"/>
+        </VBox>
+
+        <!-- Image Options Panel (Hidden if Extract Images is unchecked) -->
+        <VBox fx:id="imageOptionsPanel" spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label text="Image Extraction Options" style="-fx-font-weight: bold;"/>
+            
+            <HBox spacing="20">
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Include:" style="-fx-font-size: 11px;"/>
+                    <CheckBox fx:id="chkIncIndividual" text="Individual Channels" selected="true"/>
+                    <CheckBox fx:id="chkIncMerged" text="Merged Overlay" selected="true"/>
+                    <CheckBox fx:id="chkIncReference" text="Reference Images" selected="true"/>
+                    <CheckBox fx:id="chkIncThumbnail" text="Thumbnail" selected="true"/>
+                </VBox>
+                
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Format:" style="-fx-font-size: 11px;"/>
+                    <RadioButton fx:id="rbTiff16" text="TIFF 16-bit (Raw)" selected="true">
+                        <toggleGroup>
+                            <ToggleGroup fx:id="formatGroup"/>
+                        </toggleGroup>
+                    </RadioButton>
+                    <RadioButton fx:id="rbTiff8" text="TIFF 8-bit (Scaled)" toggleGroup="$formatGroup"/>
+                    <RadioButton fx:id="rbPng" text="PNG 8-bit" toggleGroup="$formatGroup"/>
+                </VBox>
+            </HBox>
+            
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Channels found:"/>
+                <Label fx:id="lblChannelsFound" text="None (Load file first)" style="-fx-text-fill: gray;"/>
+            </HBox>
+            
+
+        </VBox>
+
+        <Region VBox.vgrow="ALWAYS"/>
+        
+        <HBox spacing="15" alignment="CENTER">
+            <Button fx:id="btnStart" text="START PROCESSING" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #2e8b57; -fx-text-fill: white;" 
+                    prefWidth="250" prefHeight="45" disable="true" onAction="#onStartProcessing"/>
+        </HBox>
+        
+    </VBox>
+
+    <!-- ============================================== -->
+    <!-- SCREEN 2: PROGRESS                             -->
+    <!-- ============================================== -->
+    <VBox fx:id="progressScreen" spacing="15" visible="false" style="-fx-background-color: #f4f4f4; -fx-padding: 30;">
+        <Label text="Processing..." style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+        <Label fx:id="lblProgressFileName" text="file.oir" style="-fx-font-weight: bold;"/>
+        
+        <ProgressBar fx:id="progressBar" progress="0.0" prefWidth="740"/>
+        
+        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label fx:id="lblTask1" text="⬜ Task 1: Extract XML"/>
+            <Label fx:id="lblTask2" text="⬜ Task 2: Validate XML"/>
+            <Label fx:id="lblTask3" text="⬜ Task 3: Extract Images"/>
+        </VBox>
+
+        <Label fx:id="lblCurrentAction" text="Initializing..." style="-fx-font-style: italic;"/>
+        
+        <TextArea fx:id="txtLog" VBox.vgrow="ALWAYS" editable="false" style="-fx-font-family: monospace;"/>
+        
+        <HBox alignment="CENTER_RIGHT">
+            <Button fx:id="btnCancel" text="Cancel Processing" onAction="#onCancel" style="-fx-text-fill: #d9534f;"/>
+        </HBox>
+    </VBox>
+
+    <!-- ============================================== -->
+    <!-- SCREEN 3: RESULTS                              -->
+    <!-- ============================================== -->
+    <VBox fx:id="resultsScreen" spacing="20" visible="false" alignment="TOP_CENTER" style="-fx-background-color: #f4f4f4; -fx-padding: 40;">
+        <Label fx:id="lblResultIcon" text="✅" style="-fx-font-size: 48px;"/>
+        <Label fx:id="lblResultTitle" text="Processing Complete" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+        
+        <GridPane hgap="20" vgap="10" alignment="CENTER" style="-fx-background-color: white; -fx-padding: 20; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label text="File:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="resFileName" text="-" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            
+            <Label text="Channels:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="resChannels" text="-" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            
+            <Label text="Z Levels / T Points:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="resZT" text="-" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            
+            <Label text="Total Frames:" GridPane.rowIndex="3" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="resFrames" text="-" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+            
+            <Label text="Images Extracted:" GridPane.rowIndex="4" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="resImages" text="-" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        </GridPane>
+
+        <VBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: white; -fx-padding: 20; -fx-border-color: #ddd; -fx-border-radius: 5;">
+            <Label text="Task Results" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+            
+            <HBox spacing="10">
+                <Label text="XML Extraction:"/>
+                <Hyperlink fx:id="lnkXmlFile" text="experiment_metadata.xml" onAction="#onOpenXml"/>
+            </HBox>
+            
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="XML Validation:"/>
+                <Label fx:id="lblValidationStats" text="55/55 Passed"/>
+            </HBox>
+        </VBox>
+
+        <Region VBox.vgrow="ALWAYS"/>
+
+        <HBox spacing="20" alignment="CENTER">
+            <Button text="Open Output Folder" onAction="#onOpenOutputFolder" prefWidth="180" prefHeight="40"/>
+            <Button text="Process Another File" onAction="#onProcessAnother" prefWidth="180" prefHeight="40" style="-fx-font-weight: bold;"/>
+        </HBox>
+    </VBox>
+
+</StackPane>
