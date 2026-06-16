@@ -6,7 +6,7 @@ echo   OIR File Analyzer - Starting up...
 echo  ==========================================
 echo.
 
-set "MVN=C:\Users\Rahul K Lingammanava\AppData\Local\apache-maven\apache-maven-3.9.9\bin\mvn.cmd"
+set "MVN=mvn"
 cd /d "D:\phase-01\oir-analyzer"
 
 echo  Working dir: %CD%
